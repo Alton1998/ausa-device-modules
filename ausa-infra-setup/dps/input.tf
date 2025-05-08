@@ -22,7 +22,12 @@ variable "account_replication_type" {
   description = "IoT Hub Storage Account Replication Type"
 }
 
-variable "azurerm_storage_container_name" {
+variable "storage_container_name" {
   default = "ausa_iot_hub_storage_container"
   description = "IoT hub storage container name"
+}
+
+variable "storage_container_access_type" {
+  default = "private"
+  description = "IoT hub storage account access policy, default is private"
 }
