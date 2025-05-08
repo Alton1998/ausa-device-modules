@@ -1,15 +1,26 @@
 # ausa-device-modules
 ## Overview
 This repository has a collection of ausa device modules
-
-
 You can run this against a simulator or an actual device.
+## Architecture
+We are using terraform to automatically provision our resources
+
+
 ## Setup with Iot Edge Simulator
+
+## Provisioning Resources on Cloud with Terraform
 
 ### Pre-requisites
  - Install Python version 3.7.4
  - Install Docker CE
  - Azure CLI
+### Commands
+
+```commandline
+pip install --upgrade iotedgehubdev
+```
+
+
 
 
 ## Setup an IoT Edge Device
@@ -407,5 +418,20 @@ Signing the device certificate
 openssl ca -batch -config ./openssl_device_intermediate_ca.cnf -passin pass:1234 -extensions usr_cert -days 30 -notext -md sha256 -in ./csr/device-01.csr.pem -out ./certs/device-01.cert.pem
 ```
 
-## Auto-generation 
+## Auto-generation of device Certificates
+```sh
+registration_id=device-02
+echo $registration_id
+openssl genrsa -out ./private/${registration_id}.key.pem 4096
+openssl req -config ./openssl_device_intermediate_ca.cnf -key ./private/${registration_id}.key.pem -subj "//CN=$registration_id" -new -sha256 -out ./csr/${registration_id}.csr.pem
+openssl ca -batch -config ./openssl_device_intermediate_ca.cnf -passin pass:1234 -extensions usr_cert -days 30 -notext -md sha256 -in ./csr/${registration_id}.csr.pem -out ./certs/${registration_id}.cert.pem
+cat ./certs/${registration_id}.cert.pem ./certs/azure-iot-test-only.intermediate.cert.pem ./certs/azure-iot-test-only.root.ca.cert.pem > ./certs/${registration_id}-full-chain.cert.pem
+```
+## Setting up DPS and enrollment groups
 
+### Step 1 : Creating a Device Provisionin Service 
+
+## Resources
+1. https://learn.microsoft.com/en-us/azure/iot-dps/quick-setup-auto-provision-terraform?tabs=bash
+2. https://learn.microsoft.com/en-us/azure/iot-dps/tutorial-custom-hsm-enrollment-group-x509?pivots=programming-language-csharp#create-an-x509-certificate-chain
+3. 
