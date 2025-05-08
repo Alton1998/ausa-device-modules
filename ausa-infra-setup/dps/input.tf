@@ -31,3 +31,8 @@ variable "storage_container_access_type" {
   default = "private"
   description = "IoT hub storage account access policy, default is private"
 }
+
+variable "ausa_event_hub_namespace" {
+  default = "ausa"
+  description = "Azure IoT hub event hub namespace"
+}

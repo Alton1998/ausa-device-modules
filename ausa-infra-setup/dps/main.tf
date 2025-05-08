@@ -9,12 +9,12 @@ resource "azurerm_storage_account" "sa" {
 resource "azurerm_storage_container" "ausa_iot_hub_storage_container" {
   name                  = var.storage_container_name
   storage_account_name  = azurerm_storage_account.sa.name
-  container_access_type = "private"
+  container_access_type = var.storage_container_access_type
 }
 
 resource "azurerm_eventhub_namespace" "namespace" {
-  name                = random_pet.eventhub_namespace_name.id
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  name                = var.ausa_event_hub_namespace
+  resource_group_name = var.resource_group_name
+  location            = var.resource_group_location
   sku                 = "Basic"
 }
