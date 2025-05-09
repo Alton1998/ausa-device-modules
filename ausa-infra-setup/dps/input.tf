@@ -36,3 +36,8 @@ variable "ausa_event_hub_namespace" {
   default = "ausa"
   description = "Azure IoT hub event hub namespace"
 }
+
+variable "ausa_event_hub_namespace_tier" {
+  default = "Basic"
+  description = "Azure"
+}
