@@ -3,6 +3,7 @@ import asyncio
 
 from amqtt.client import MQTTClient, ConnectException
 from amqtt.mqtt.constants import QOS_1, QOS_2
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ config = {
     }
 }
 
+HOST = os.getenv("HOST")
 
 async def publish_messages():
     try:

@@ -1,15 +1,17 @@
 import logging
 import asyncio
+import os
 
 from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_1,QOS_2,QOS_0
 
 logger = logging.getLogger(__name__)
 
+HOST = os.getenv("HOST")
 
 async def message_receiver():
     client = MQTTClient()
-    await client.connect("mqtt://127.0.0.1:1883/")
+    await client.connect(f"mqtt://{HOST}:1883/")
 
     await client.subscribe([
         ("a/b", QOS_1),

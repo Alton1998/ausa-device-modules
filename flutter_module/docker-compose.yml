@@ -1,11 +1,31 @@
-version: "3.8"
+version: "3.9"
+
+networks:
+  broker-net:
+    driver: bridge
+
 services:
-  mosquitto:
-    image: eclipse-mosquitto
-    container_name: mqtt-broker
+  broker:
+    build: ./broker
     ports:
       - "1883:1883"
-    volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - broker-net
+
+  publisher:
+    build: ./publisher
+    environment:
+      - HOST=broker
+    networks:
+      - broker-net
+    depends_on:
+      - broker
+
+  subscriber:
+    build: ./subscriber
+    environment:
+      - HOST=broker
+    networks:
+      - broker-net
+    depends_on:
+      - broker
