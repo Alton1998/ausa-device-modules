@@ -11,14 +11,12 @@ async def message_receiver():
     client = MQTTClient()
     await client.connect("mqtt://127.0.0.1:1883/")
 
-    # Subscribe to topic 'a/b' with QoS 1
     await client.subscribe([
         ("a/b", QOS_1),
     ])
 
     logger.info("Subscribed to topic 'a/b'")
 
-    # Give time for subscription to register
     await asyncio.sleep(1)
 
     try:
