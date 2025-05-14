@@ -1,0 +1,3 @@
+HostName=ausatest.azure-devices.net;DeviceId=cyber;SharedAccessKey=NVAtqj2bt7LgsLieUTeTvEDQugV4R9i7GIKR8HHHE3E=
+
+iotedgehubdev setup -c "HostName=ausatest.azure-devices.net;DeviceId=cyber;SharedAccessKey=NVAtqj2bt7LgsLieUTeTvEDQugV4R9i7GIKR8HHHE3E="
