@@ -38,6 +38,27 @@ We are using terraform to automatically provision our resources
 1. Create an IoT Hub
 2. Create a device with symmetric key 
 
+### Configure IoT Hub in Azure Portal
+1. Go to the **Azure Portal**
+2. Navigate to **IoT Hub** > **Device Management** > **Devices**
+3. Click on **Add Device**
+4. Choose **Symmetric Keys**, check **IoT Edge Device**, and provide a **Device ID**
+5. Click **Save**
+6. Copy the **Primary and Secondary Connection Strings** and store them safely
+
+### Installing IoTEdgeHubDev
+
+```commandline
+cd manifests
+pip install -r requirements.txt
+```
+Do the following for Windows
+
+![]
+```commandline
+
+```
+
 ## Provisioning Resources on Cloud with Terraform
 
 ### Pre-requisites
@@ -46,9 +67,7 @@ We are using terraform to automatically provision our resources
  - Azure CLI
 ### Commands
 
-```commandline
-pip install --upgrade iotedgehubdev
-```
+
 
 
 
