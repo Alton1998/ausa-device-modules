@@ -27,8 +27,6 @@ async def publish_messages():
 
         logger.info("Messages published")
 
-        # Optional delay to ensure subscriber has time to receive
-
         await C.disconnect()
     except ConnectException as ce:
         logger.error("Connection failed: %s" % ce)
