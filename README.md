@@ -3,6 +3,32 @@
 This repository has a collection of ausa device modules
 You can run this against a simulator or an actual device.
 
+## Flutter Module
+
+### Building Broker
+
+```commandline
+cd flutter_module
+cd broker
+docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1 .
+docker push ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1
+```
+
+### Building Subscriber
+```commandline
+cd flutter_module
+cd subscriber
+docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.1 .
+docker push ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1
+```
+
+### Running the flutter module locally
+
+```commandline
+cd flutter_module
+docker-compose up -d
+```
+
 ## Architecture
 We are using terraform to automatically provision our resources
 
