@@ -5,6 +5,8 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
+EXPOSE 1883
+
 COPY . .
 
 CMD [ "python3", "-u", "./broker.py" ]
