@@ -55,8 +55,10 @@ pip install -r requirements.txt
 Do the following for Windows
 
 ![TLS](./image/img.png)
+![ENV](./image/img_1.png)
 ```commandline
-
+iotedgehubdev setup -c "<edge-device-connection-string>"
+iotedgehubdev start -d .\deployment.amd64.json    
 ```
 
 ## Provisioning Resources on Cloud with Terraform
