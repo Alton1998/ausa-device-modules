@@ -61,7 +61,7 @@
               "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.1"
             }
           },
-          "sql": {
+          "database": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
