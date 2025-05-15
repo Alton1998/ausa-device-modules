@@ -70,7 +70,17 @@
             "settings": {
               "image": "ausahealthcontainerregistry1.azurecr.io/ausa_device_database:0.0.1"
             }
-          }
+          },
+          "blob": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "startupOrder": 1,
+            "settings": {
+              "image": "mcr.microsoft.com/azure-blob-storage:latest"
+            }
+          },
         }
       }
     },
