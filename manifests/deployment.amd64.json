@@ -78,9 +78,10 @@
             "restartPolicy": "always",
             "startupOrder": 1,
             "settings": {
-              "image": "mcr.microsoft.com/azure-blob-storage:latest"
+              "image": "mcr.microsoft.com/azure-blob-storage:latest",
+              "createOptions": "\"{\\\"Env\\\":[\\n \\\"LOCAL_STORAGE_ACCOUNT_NAME=ausablobstorage\\\",\\n    \\\"LOCAL_STORAGE_ACCOUNT_KEY=GaQ2V6M59EYWEoptNraSOA==\\\"\\n  ],\\n  \\\"HostConfig\\\":{\\n    \\\"Binds\\\":[\\n        \\\"./:/blobroot\\\"\\n    ],\\n    \\\"PortBindings\\\":{\\n      \\\"11002/tcp\\\":[{\\\"HostPort\\\":\\\"11002\\\"}]\\n    }\\n  }\\n}\""
             }
-          },
+          }
         }
       }
     },
@@ -100,6 +101,26 @@
       "properties.desired": {
         "TemperatureThreshold": 25
       }
+    },
+    "blob":{
+  "properties.desired": {
+    "deviceAutoDeleteProperties": {
+      "deleteOn": false,
+      "deleteAfterMinutes": 240,
+      "retainWhileUploading": true
+    },
+    "deviceToCloudUploadProperties": {
+      "uploadOn": false,
+      "uploadOrder": "OldestFirst",
+      "cloudStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=<your Azure Storage Account Name>;AccountKey=<your Azure Storage Account Key>;EndpointSuffix=<your end point suffix>",
+      "storageContainersForUpload": {
+        "ausaedgestorage": {
+          "target": "ausacontainer"
+        }
+      },
+      "deleteAfterUpload": false
     }
+  }
+}
   }
 }
