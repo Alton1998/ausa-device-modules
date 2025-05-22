@@ -22,10 +22,7 @@ async def publish_messages():
     try:
         C = MQTTClient(config=config)
         await C.connect(f"mqtt://{HOST}:1883/")
-
-        await C.publish("a/b", b"TEST MESSAGE WITH QOS_0", qos=0x00)
-        await C.publish("a/b", b"TEST MESSAGE WITH QOS_1", qos=QOS_1)
-        await C.publish("a/b", b"TEST MESSAGE WITH QOS_2", qos=QOS_2)
+        await C.publish("authentication/1231232", b"TEST MESSAGE WITH QOS_2", qos=QOS_2)
 
         logger.info("Messages published")
 
