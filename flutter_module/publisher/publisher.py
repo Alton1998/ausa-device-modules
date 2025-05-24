@@ -16,7 +16,7 @@ config = {
     }
 }
 
-HOST = os.getenv("HOST")
+HOST = os.getenv("HOST","broker")
 
 async def publish_messages():
     try:
