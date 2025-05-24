@@ -9,7 +9,7 @@ MAIN_SERVER_URI = os.getenv("MAIN_SERVER")
 
 def check_main_server_uri_set(func):
     def actual_check():
-        if MAIN_SERVER_URI:
+        if not MAIN_SERVER_URI:
             raise Exception("Set the Variable Main Server Uri in the environments in the manifest file. Youuuuu Dumb Bruhhhhhh. Like Sooooooo Dumbbb")
     def inner(topic,payload):
         actual_check()

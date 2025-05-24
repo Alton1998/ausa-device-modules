@@ -39,26 +39,41 @@
         },
         "modules": {
           "broker": {
-            "version": "1.0",
+            "version": "3.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "startupOrder": 1,
             "settings": {
-              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1"
+              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.3"
             }
           },
           "subscriber": {
-            "version": "1.0",
+            "version": "4.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "startupOrder": 2,
             "env": {
-              "HOST": {"value": "broker"}
+              "HOST": {"value": "broker"},
+              "MAIN_SERVER": {"value": "api.ausa.health"}
             },
             "settings": {
-              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.1"
+              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.3"
+            }
+          },
+          "test_publisher": {
+            "version": "3.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "startupOrder": 2,
+            "env": {
+              "HOST": {"value": "broker"},
+              "MAIN_SERVER": {"value": ""}
+            },
+            "settings": {
+              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_publisher:0.0.3"
             }
           },
           "database": {
