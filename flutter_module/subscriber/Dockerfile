@@ -6,5 +6,5 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY . .
-
+COPY ./authentication_handler .
 CMD [ "python3", "-u", "./subscriber.py" ]

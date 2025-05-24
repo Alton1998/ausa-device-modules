@@ -10,16 +10,16 @@ You can run this against a simulator or an actual device.
 ```commandline
 cd flutter_module
 cd broker
-docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1 .
-docker push ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1
+docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.2 .
+docker push ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.2
 ```
 
 ### Building Subscriber
 ```commandline
 cd flutter_module
 cd subscriber
-docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.1 .
-docker push ausahealthcontainerregistry1.azurecr.io/flutter_broker:0.0.1
+docker build -t ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.2 .
+docker push ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.2
 ```
 
 ### Running the flutter module locally

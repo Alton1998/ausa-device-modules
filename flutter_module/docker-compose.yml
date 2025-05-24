@@ -25,6 +25,7 @@ services:
     build: ./subscriber
     environment:
       - HOST=broker
+      - MAIN_SERVER=
     networks:
       - broker-net
     depends_on:

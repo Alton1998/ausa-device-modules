@@ -7,7 +7,7 @@ from typing import Callable, List, Tuple
 from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
 
-from authentication_handler.authentication_handler import authencation_handler
+from authentication_handler.authentication_handler import authentication_handler, otp_verify_handler
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -63,7 +63,8 @@ async def message_receiver():
 
 # Run the MQTT subscriber
 if __name__ == "__main__":
-    register_handler("authentication/#",QOS_2,authencation_handler)
+    register_handler("authentication/#", QOS_2, authentication_handler)
+    register_handler("otp/verify/#",QOS_2,otp_verify_handler)
     try:
         asyncio.get_event_loop().run_until_complete(message_receiver())
     except KeyboardInterrupt:
