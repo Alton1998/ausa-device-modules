@@ -10,9 +10,9 @@
             "loggingOptions": "",
             "registryCredentials": {
               "myacr": {
-                "username": "",
+                "username": "AusaHealthContainerRegistry1",
                 "password": "",
-                "address": ""
+                "address": "ausahealthcontainerregistry1.azurecr.io"
               }
             }
           }
@@ -49,7 +49,7 @@
             }
           },
           "subscriber": {
-            "version": "4.0",
+            "version": "7.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
@@ -59,7 +59,8 @@
               "MAIN_SERVER": {"value": "api.ausa.health"}
             },
             "settings": {
-              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.3"
+              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.8",
+              "createOptions": "{\"HostConfig\":{\"Binds\":[\"/var/aziot:/var/aziot:ro\"]}}"
             }
           },
           "test_publisher": {

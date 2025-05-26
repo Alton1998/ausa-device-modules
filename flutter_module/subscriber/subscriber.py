@@ -6,6 +6,8 @@ from typing import Callable, List, Tuple
 
 from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
+from azure.iot.device.iothub.aio import IoTHubModuleClient,IoTHubDeviceClient
+from azure.iot.device.common.auth import connection_string as cs
 
 from authentication_handler.authentication_handler import authentication_handler, otp_verify_handler
 
@@ -26,7 +28,16 @@ def register_handler(topic_pattern: str, qos: int, callback: Callable[[str, str]
     subscriptions.append((topic_pattern, qos, callback))
     logger.debug(f"Registered handler for topic '{topic_pattern}' with QoS {qos}")
 
+
 async def message_receiver():
+    azure_iot_edge_client = IoTHubModuleClient.create_from_edge_environment()
+    device_twin = await azure_iot_edge_client.get_twin()
+    something = azure_iot_edge_client.__dict__
+    logger.info("The twin you are looking for alton")
+    logger.info(device_twin)
+    logger.info(something)
+    for key, value in os.environ.items():
+        logger.info(f"{key}: {value}")
     client = MQTTClient()
     await client.connect(f"mqtt://{BROKER_HOST}:1883/")
 

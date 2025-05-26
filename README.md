@@ -493,4 +493,5 @@ We can use python [cryptography library](https://cryptography.io/en/latest/x509/
 2. https://learn.microsoft.com/en-us/azure/iot-dps/tutorial-custom-hsm-enrollment-group-x509?pivots=programming-language-csharp#create-an-x509-certificate-chain
 3. https://learn.microsoft.com/en-us/azure/iot-edge/module-composition
 4. https://learn.microsoft.com/en-us/azure/iot-edge/how-to-provision-single-device-linux-x509?tabs=azure-portal%2Cubuntu
+5. https://learn.microsoft.com/en-us/azure/iot-edge/module-composition#define-or-update-desired-properties
 
