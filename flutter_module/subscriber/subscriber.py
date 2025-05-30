@@ -6,10 +6,9 @@ from typing import Callable, List, Tuple
 
 from amqtt.client import MQTTClient, ClientException
 from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from azure.iot.device.iothub.aio import IoTHubModuleClient,IoTHubDeviceClient
-from azure.iot.device.common.auth import connection_string as cs
+from azure.iot.device.iothub.aio import IoTHubModuleClient
 
-from authentication_handler.authentication_handler import authentication_handler, otp_verify_handler
+from authentication_handler.authentication_handler import authentication_handler, otp_verify_handler, authenticate_user
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -24,6 +23,7 @@ BROKER_HOST = os.getenv("HOST", "localhost")
 # Handler type: (pattern, qos, callback)
 subscriptions: List[Tuple[str, int, Callable[[str, str], None]]] = []
 
+
 def register_handler(topic_pattern: str, qos: int, callback: Callable[[str, str], None]):
     subscriptions.append((topic_pattern, qos, callback))
     logger.debug(f"Registered handler for topic '{topic_pattern}' with QoS {qos}")
@@ -31,11 +31,14 @@ def register_handler(topic_pattern: str, qos: int, callback: Callable[[str, str]
 
 async def message_receiver():
     azure_iot_edge_client = IoTHubModuleClient.create_from_edge_environment()
-    device_twin = await azure_iot_edge_client.get_twin()
-    something = azure_iot_edge_client.__dict__
-    logger.info("The twin you are looking for alton")
-    logger.info(device_twin)
-    logger.info(something)
+
+    def twin_patch_handler(patch):
+        logger.info(f"the data in the desired properties patch was:{patch}")
+        if "deviceToken" in patch:
+            os.environ["DEVICE_TOKEN"] = patch["deviceToken"]["token"]
+
+    azure_iot_edge_client.on_twin_desired_properties_patch_received = twin_patch_handler
+
     for key, value in os.environ.items():
         logger.info(f"{key}: {value}")
     client = MQTTClient()
@@ -57,8 +60,12 @@ async def message_receiver():
 
             matched = False
             for pattern, _, callback in subscriptions:
+                if topic.endswith("/response"):
+                    break
                 if fnmatch.fnmatchcase(topic, pattern.replace("#", "*").replace("+", "?")):
-                    callback(topic, payload)
+                    response = callback(topic, payload)
+                    logger.info(f"Callback:{callback} and Response: {response}")
+                    await client.publish(topic + "/response", response, QOS_2)
                     matched = True
             if not matched:
                 logger.warning(f"No handler matched for topic: {topic}")
@@ -72,10 +79,12 @@ async def message_receiver():
         await client.disconnect()
         logger.info("Disconnected and unsubscribed.")
 
+
 # Run the MQTT subscriber
 if __name__ == "__main__":
     register_handler("authentication/#", QOS_2, authentication_handler)
-    register_handler("otp/verify/#",QOS_2,otp_verify_handler)
+    register_handler("otp/verify/#", QOS_2, otp_verify_handler)
+    register_handler("authenticate_user/#",QOS_2, authenticate_user)
     try:
         asyncio.get_event_loop().run_until_complete(message_receiver())
     except KeyboardInterrupt:

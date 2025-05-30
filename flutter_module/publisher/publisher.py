@@ -23,6 +23,9 @@ async def publish_messages():
         C = MQTTClient(config=config)
         await C.connect(f"mqtt://{HOST}:1883/")
         await C.publish("authentication/1231232", b"{\n    \"identifier\" : \"amjad@ausa.health\",\n    \"password\" : \"Admin@Ausa2025\"\n}", qos=QOS_2)
+        await C.publish("authenticate_user/1231232",
+                        b"{\n    \"identifier\" : \"amjad@ausa.health\",\n    \"password\" : \"Admin@Ausa2025\"\n}",
+                        qos=QOS_2)
         await C.publish("otp/verify/1231231231",b"Test",qos=QOS_2)
 
         logger.info("Messages published")
