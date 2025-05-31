@@ -1,0 +1,14 @@
+FROM amd64/python:3.7-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN apt-get update && apt-get install -y \
+    bluetooth \
+    bluez \
+    libglib2.0-dev \
+    dbus \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install -r requirements.txt
+COPY . .
+CMD [ "python3", "-u", "./vitals.py" ]

@@ -1,0 +1,17 @@
+version: "3.9"
+
+networks:
+  bluetooth-net:
+    driver: bridge
+
+services:
+  vitals:
+    build: ./
+    privileged: true
+    network_mode: host
+    devices:
+      - /dev/hci0  # Replace with your actual Bluetooth adapter if different
+    volumes:
+      - /var/run/dbus:/var/run/dbus
+    environment:
+      - DBUS_SYSTEM_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
