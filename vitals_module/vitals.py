@@ -6,6 +6,7 @@ async def main():
     print("Alton")
     for d in devices:
         print("Alton")
-        print(d)
+        print(d.name)
+        print(d.details)
 
 asyncio.run(main())
