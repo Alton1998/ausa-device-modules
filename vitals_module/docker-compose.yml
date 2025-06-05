@@ -6,7 +6,7 @@ networks:
 
 services:
   vitals:
-    build: ./
+    build: ./Dockerfile.arm64
     privileged: true
     network_mode: host
     devices:
