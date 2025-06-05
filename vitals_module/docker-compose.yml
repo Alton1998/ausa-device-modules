@@ -6,7 +6,9 @@ networks:
 
 services:
   vitals:
-    build: ./Dockerfile.arm64
+    build:
+      context: .
+      dockerfile: Dockerfile.arm64
     privileged: true
     network_mode: host
     devices:
