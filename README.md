@@ -488,6 +488,11 @@ We can use python [cryptography library](https://cryptography.io/en/latest/x509/
 
 ### Step 1 : Creating a Device Provisionin Service 
 
+## Setting up Banana PI
+
+### Setting Language
+
+
 ## Resources
 1. https://learn.microsoft.com/en-us/azure/iot-dps/quick-setup-auto-provision-terraform?tabs=bash
 2. https://learn.microsoft.com/en-us/azure/iot-dps/tutorial-custom-hsm-enrollment-group-x509?pivots=programming-language-csharp#create-an-x509-certificate-chain
