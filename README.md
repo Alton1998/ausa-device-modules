@@ -489,8 +489,50 @@ We can use python [cryptography library](https://cryptography.io/en/latest/x509/
 ### Step 1 : Creating a Device Provisionin Service 
 
 ## Setting up Banana PI
+Do not use the built image in the eMMC. Image a Sige5 image.
 
+
+### Imaging the Banana Pi
+Follow [this](https://docs.armsom.org/getting-start/flash-img)
+### Changing Networking from IPv4 to IPv6
+1. Install `ufw`
+```sh
+sudo apt update
+sudo apt install ufw -y
+sudo ufw allow 5901/tcp # for vncserver
+sudo ufw allow 22/tcp # for ssh server
+#sudo ufw allow ssh
+sudo ufw enable
+```
+After you enable you enable `ufw` you might lose ssh access so you can check it out and if it doesn't work run `sudo ufw disable`
+2. Edit file
+```sh
+sudo nano /etc/default/ufw
+```
+3. Change
+```sh
+IPV6=no
+```
 ### Setting Language
+1. Check available locales
+```commandline
+locale -a
+```
+2. Generate locale if not available
+```commandline
+sudo locale-gen en_US.UTF-8
+```
+3. Set the system locale
+```commandline
+sudo nano /etc/default/locale
+```
+```commandline
+LANG=en_US.UTF-8
+LANGUAGE=en_US:en
+LC_ALL=en_US.UTF-8
+```
+4. Reboot
+
 
 
 ## Resources
