@@ -533,6 +533,23 @@ LC_ALL=en_US.UTF-8
 ```
 4. Reboot
 
+## Workflows
+
+### Authentication
+
+![Authentication](./image/authentication_workflow.png)
+
+### Vitals Test
+
+![Vitals](./image/test_workflows.png)
+
+### Fetching User Details
+
+![User Details](./image/user_details.png)
+
+### Scan Wifi and Bluetooth
+
+![Device Scan](./image/device_Scal.png)
 
 
 ## Resources
