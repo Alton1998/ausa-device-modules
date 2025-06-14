@@ -66,42 +66,10 @@ while True:
             keypoint_name = model.config.id2label[label.item()]
             if keypoint_name=="R_Shoulder" or keypoint_name=="R_Elbow":
                 x, y = keypoint
-                z = np.array(depth)[int(y)][int(x)]
-                print(z)
+                z = np.array(depth)[int(x)][int(y)]
                 cv.circle(frame, (int(x),int(y)), radius=4, color=(0, 0, 255), thickness=-1)
                 bp[keypoint_name]=np.array([x,y,z])
-        axis = bp.get("R_Elbow",np.array([0,0,0])) - bp.get("R_Shoulder",np.array([0,0,0]))
-        arm_length = np.linalg.norm(axis)
-        axis_unit = axis/arm_length
-        cylinder = trimesh.creation.cylinder(radius=0.05, height=arm_length, sections=32)
-        rotation = trimesh.geometry.align_vectors([0, 0, 1], axis_unit)
-        cylinder.apply_transform(rotation)
-        cylinder.apply_translation(bp.get("R_Shoulder",np.array([0,0,0])))
-        scene = pyrender.Scene()
-        mesh = pyrender.Mesh.from_trimesh(cylinder)
-        scene.add(mesh)
-
-        camera = pyrender.PerspectiveCamera(yfov=np.pi / 3.0)
-        camera_pose = np.array([
-            [1.0, 0.0, 0.0, 0.2],
-            [0.0, 1.0, 0.0, 0.1],
-            [0.0, 0.0, 1.0, 1.0],  # camera moved forward
-            [0.0, 0.0, 0.0, 1.0]
-        ])
-        scene.add(camera, pose=camera_pose)
-
-        # Add light
-        light = pyrender.DirectionalLight(color=np.ones(3), intensity=3.0)
-        scene.add(light, pose=camera_pose)
-
-        # Render the scene offscreen
-        r = pyrender.OffscreenRenderer(viewport_width=width, viewport_height=height)
-        rendered_color, _ = r.render(scene)
-        rendered_color = cv.cvtColor(rendered_color, cv.COLOR_RGB2BGR)
-
-        # Blend webcam and rendered output
-        overlay = cv.addWeighted(frame, 0.5, rendered_color, 0.5, 0)
-        cv.imshow('frame',overlay)
+        cv.imshow('frame',frame)
 
     if cv.waitKey(1) == ord('q'):
         break
