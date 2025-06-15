@@ -13,7 +13,7 @@ person_image_processor = AutoProcessor.from_pretrained("PekingU/rtdetr_r50vd_coc
 person_model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r50vd_coco_o365", device_map=device)
 pose_processor = AutoProcessor.from_pretrained("usyd-community/vitpose-base-simple")
 pose_model = VitPoseForPoseEstimation.from_pretrained("usyd-community/vitpose-base-simple", device_map=device)
-depth_pipe = pipeline("depth-estimation", model="hf-tiny-model-private/tiny-random-GLPNForDepthEstimation")
+# depth_pipe = pipeline("depth-estimation", model="hf-tiny-model-private/tiny-random-GLPNForDepthEstimation")
 
 cap = cv.VideoCapture(0)
 if not cap.isOpened():
