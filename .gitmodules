@@ -1,0 +1,3 @@
+[submodule "hardware_scanner_module/pybluez"]
+	path = hardware_scanner_module/pybluez
+	url = https://github.com/pybluez/pybluez.git
