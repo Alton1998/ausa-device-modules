@@ -13,7 +13,7 @@ person_image_processor = AutoProcessor.from_pretrained("PekingU/rtdetr_r50vd_coc
 person_model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r50vd_coco_o365", device_map=device)
 pose_processor = AutoProcessor.from_pretrained("usyd-community/vitpose-base-simple")
 pose_model = VitPoseForPoseEstimation.from_pretrained("usyd-community/vitpose-base-simple", device_map=device)
-# depth_pipe = pipeline("depth-estimation", model="hf-tiny-model-private/tiny-random-GLPNForDepthEstimation")
+depth_pipe = pipeline("depth-estimation", model="hf-tiny-model-private/tiny-random-GLPNForDepthEstimation")
 
 cap = cv.VideoCapture(0)
 if not cap.isOpened():
@@ -56,7 +56,7 @@ while True:
     for person_pose in image_pose_result:
         keypoints = {}
         for keypoint, label, score in zip(
-            person_pose["keypoints"], person_pose["labels"], person_pose["scores"]
+                person_pose["keypoints"], person_pose["labels"], person_pose["scores"]
         ):
             kp_name = pose_model.config.id2label[label.item()]
             x, y = keypoint
@@ -74,6 +74,7 @@ while True:
             cv.line(overlay, pt1_new, pt2_new, blue_color, thickness)
             cv.addWeighted(overlay, color_alpha, frame, 1 - color_alpha, 0, frame)
     cv.imshow("frame", frame)
+    cv.imshow("depth", depth)
     if cv.waitKey(1) == ord('q'):
         break
 
