@@ -1,0 +1,14 @@
+
+services:
+  rqlite:
+    image: rqlite/rqlite:latest
+    container_name: rqlite
+    ports:
+      - "4001:4001"  # HTTP API
+      - "4002:4002"  # Raft internal communication
+    volumes:
+      - rqlite-data:/rqlite/file
+    command: ["-http-addr", "0.0.0.0:4001", "-raft-addr", "0.0.0.0:4002"]
+
+volumes:
+  rqlite-data:

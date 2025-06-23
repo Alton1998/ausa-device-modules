@@ -1,86 +1,158 @@
-import logging
 import asyncio
 import os
-import fnmatch
-from typing import Callable, List, Tuple
+import uuid
+import threading
+import logging
 
-from amqtt.client import MQTTClient, ClientException
-from amqtt.mqtt.constants import QOS_0, QOS_1, QOS_2
-from azure.iot.device.iothub.aio import IoTHubModuleClient
+import pyrqlite.dbapi2 as dbapi2
 
-from authentication_handler.authentication_handler import authentication_handler, otp_verify_handler, authenticate_user
 
-# Setup logging
-logger = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
 )
+logger = logging.getLogger(__name__)
 
-# Environment broker config
-BROKER_HOST = os.getenv("HOST", "localhost")
+Tables = {
+    "data_sync": {
+        "columns": ["data"],
+        "data_type": [],
+        "interval": 10  # seconds
+    },
+    "data_sync_1": {
+        "columns": ["data"],
+        "data_type": [],
+        "interval": 20  # seconds
+    }
+}
 
-# Handler type: (pattern, qos, callback)
-subscriptions: List[Tuple[str, int, Callable[[str, str], None]]] = []
+HOST = os.getenv("HOST", "localhost")
+PORT = int(os.getenv("PORT", 4001))
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 10))
 
+TASKS = {}
 
-def register_handler(topic_pattern: str, qos: int, callback: Callable[[str, str], None]):
-    subscriptions.append((topic_pattern, qos, callback))
-    logger.debug(f"Registered handler for topic '{topic_pattern}' with QoS {qos}")
+class RqliteConnectionSingleton:
+    _instance = None
+    _lock = threading.Lock()
 
+    @classmethod
+    def get_connection(cls):
+        with cls._lock:
+            if cls._instance is None or not cls._is_connection_alive(cls._instance):
+                logger.debug("Creating new rqlite connection")
+                cls._instance = dbapi2.connect(host=HOST, port=PORT)
+            return cls._instance
 
-async def message_receiver():
-    azure_iot_edge_client = IoTHubModuleClient.create_from_edge_environment()
+    @staticmethod
+    def _is_connection_alive(conn):
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1;")
+            cursor.fetchone()
+            return True
+        except Exception as e:
+            logger.warning("Rqlite connection is not alive: %s", e)
+            return False
 
-    def twin_patch_handler(patch):
-        logger.info(f"the data in the desired properties patch was:{patch}")
-
-    azure_iot_edge_client.on_twin_desired_properties_patch_received = twin_patch_handler
-
-    for key, value in os.environ.items():
-        logger.info(f"{key}: {value}")
-    client = MQTTClient()
-    await client.connect(f"mqtt://{BROKER_HOST}:1883/")
-
-    # Build subscription list
-    topic_qos_list = [(pattern, qos) for pattern, qos, _ in subscriptions]
-    await client.subscribe(topic_qos_list)
-    logger.info(f"Subscribed to topics: {topic_qos_list}")
-
+def perform_migrations():
+    logger.info("Performing migrations...")
+    connection = RqliteConnectionSingleton.get_connection()
     try:
-        while True:
-            message = await client.deliver_message()
-            packet = message.publish_packet
-            topic = packet.variable_header.topic_name
-            payload = packet.payload.data.decode()
-
-            logger.info(f"Received: {topic} => {payload}")
-
-            matched = False
-            for pattern, _, callback in subscriptions:
-                if topic.endswith("/response"):
-                    break
-                if fnmatch.fnmatchcase(topic, pattern.replace("#", "*").replace("+", "?")):
-                    response = callback(topic, payload)
-                    logger.info(f"Callback:{callback} and Response: {response}")
-                    await client.publish(topic + "/response", response, QOS_2)
-                    matched = True
-            if not matched:
-                logger.warning(f"No handler matched for topic: {topic}")
-
-    except ClientException as ce:
-        logger.error(f"Client exception: {ce}")
-    except asyncio.CancelledError:
-        logger.info("Subscriber coroutine cancelled.")
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS data_sync (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    data TEXT,
+                    synced BOOLEAN DEFAULT FALSE
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS data_sync_1 (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    data TEXT,
+                    synced BOOLEAN DEFAULT FALSE
+                )
+            """)
+            data_value = "This is a test record"
+            synced_value = False
+            for _ in range(100):
+                cursor.execute("""
+                    INSERT INTO data_sync (id, data, synced)
+                    VALUES (?, ?, ?)
+                """, (str(uuid.uuid4()), data_value, synced_value))
+            for _ in range(100):
+                cursor.execute("""
+                    INSERT INTO data_sync_1 (id, data, synced)
+                    VALUES (?, ?, ?)
+                """, (str(uuid.uuid4()), data_value, synced_value))
+        logger.info("Migrations and data seeding complete.")
+    except Exception as e:
+        logger.exception("Migration error: %s", e)
     finally:
-        await client.unsubscribe([pattern for pattern, _, _ in subscriptions])
-        await client.disconnect()
-        logger.info("Disconnected and unsubscribed.")
+        connection.close()
 
+async def send_to_cloud(*args, **kwargs):
+    table = kwargs["table"]
+    columns = kwargs.get("columns", [])
+    interval = kwargs.get("interval", 10)
+    batch_size = BATCH_SIZE
 
-# Run the MQTT subscriber
+    while True:
+        offset = 0
+        rows_fetched = 0
+        connection = RqliteConnectionSingleton.get_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                more_rows = True
+                while more_rows:
+                    if not columns:
+                        query = f"""
+                            SELECT * FROM {table}
+                            WHERE synced = false
+                            LIMIT {batch_size} OFFSET {offset}
+                        """
+                    else:
+                        col_string = ", ".join(f"`{col}`" for col in columns)
+                        query = f"""
+                            SELECT {col_string} FROM {table}
+                            WHERE synced = false
+                            LIMIT {batch_size} OFFSET {offset}
+                        """
+
+                    cursor.execute(query)
+                    rows = cursor.fetchall()
+
+                    if not rows:
+                        more_rows = False
+                        break
+
+                    logger.info(f"[{table}] Fetched {len(rows)} rows from offset {offset}")
+                    rows_fetched += len(rows)
+                    offset += batch_size
+
+                    # Simulate cloud upload delay
+                    await asyncio.sleep(0.1)
+
+        except Exception as e:
+            logger.exception(f"Error in send_to_cloud for {table}: {e}")
+        finally:
+            connection.close()
+
+        logger.info(f"[{table}] Sync cycle complete. Total rows processed: {rows_fetched}")
+        await asyncio.sleep(interval)
+
+async def main():
+    logger.info("Starting background sync tasks...")
+    for table, value in Tables.items():
+        TASKS[table] = asyncio.create_task(send_to_cloud(
+            table=table,
+            columns=value.get("columns", []),
+            interval=value.get("interval", 10)
+        ))
+    await asyncio.gather(*TASKS.values())
+
 if __name__ == "__main__":
-    try:
-        asyncio.get_event_loop().run_until_complete(message_receiver())
-    except KeyboardInterrupt:
-        print("Subscriber stopped manually.")
+    perform_migrations()
+    asyncio.run(main())
