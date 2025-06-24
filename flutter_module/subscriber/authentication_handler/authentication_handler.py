@@ -117,3 +117,6 @@ def otp_verify_handler(topic,payload):
 
     }
     return "".encode("utf-8")
+
+def user_details(topic,payload):
+    pass

@@ -1,36 +1,39 @@
 import asyncio
+import json
 import os
 import uuid
 import threading
 import logging
-
+import time
+from azure.iot.device.aio import IoTHubModuleClient
 import pyrqlite.dbapi2 as dbapi2
 
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 Tables = {
-    "data_sync": {
-        "columns": ["data"],
-        "data_type": [],
-        "interval": 10  # seconds
-    },
-    "data_sync_1": {
-        "columns": ["data"],
-        "data_type": [],
-        "interval": 20  # seconds
-    }
+    "data_sync": {"columns": ["data"], "data_type": [], "interval": 10},
+    "data_sync_1": {"columns": ["data"], "data_type": [], "interval": 20}
 }
 
 HOST = os.getenv("HOST", "localhost")
 PORT = int(os.getenv("PORT", 4001))
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 10))
 
-TASKS = {}
+def wait_for_rqlite_ready(max_retries=10, delay=3):
+    for attempt in range(max_retries):
+        try:
+            conn = dbapi2.connect(host=HOST, port=PORT)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1;")
+            cursor.fetchone()
+            conn.close()
+            logger.info("Connected to rqlite.")
+            return
+        except Exception as e:
+            logger.warning(f"rqlite not ready (attempt {attempt + 1}): {e}")
+            time.sleep(delay * (attempt + 1))  # exponential backoff
+    raise RuntimeError("rqlite not ready after multiple retries.")
 
 class RqliteConnectionSingleton:
     _instance = None
@@ -40,7 +43,7 @@ class RqliteConnectionSingleton:
     def get_connection(cls):
         with cls._lock:
             if cls._instance is None or not cls._is_connection_alive(cls._instance):
-                logger.debug("Creating new rqlite connection")
+                logger.info(f"Creating rqlite connection to {HOST}:{PORT}")
                 cls._instance = dbapi2.connect(host=HOST, port=PORT)
             return cls._instance
 
@@ -52,107 +55,137 @@ class RqliteConnectionSingleton:
             cursor.fetchone()
             return True
         except Exception as e:
-            logger.warning("Rqlite connection is not alive: %s", e)
+            logger.warning("Rqlite connection check failed: %s", e)
             return False
 
+class IoTHubClientSingleton:
+    _client = None
+
+    @classmethod
+    def get_client(cls, max_retries=5, delay=2):
+        if cls._client is None:
+            for attempt in range(max_retries):
+                try:
+                    cls._client = IoTHubModuleClient.create_from_edge_environment()
+                    logger.info("IoTHub client connected")
+                    return cls._client
+                except Exception as e:
+                    logger.warning(f"IoTHub connection failed (attempt {attempt + 1}): {e}")
+                    time.sleep(delay * (attempt + 1))
+            raise RuntimeError("IoTHub client connection failed after retries")
+        return cls._client
+
+    @classmethod
+    def disconnect(cls):
+        if cls._client:
+            cls._client.disconnect()
+            logger.info("IoTHub client disconnected")
+            cls._client = None
+
 def perform_migrations():
-    logger.info("Performing migrations...")
-    connection = RqliteConnectionSingleton.get_connection()
+    logger.info("Waiting for rqlite before migrations...")
+    wait_for_rqlite_ready()
+    conn = RqliteConnectionSingleton.get_connection()
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS data_sync (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    data TEXT,
-                    synced BOOLEAN DEFAULT FALSE
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS data_sync_1 (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    data TEXT,
-                    synced BOOLEAN DEFAULT FALSE
-                )
-            """)
-            data_value = "This is a test record"
-            synced_value = False
-            for _ in range(100):
-                cursor.execute("""
-                    INSERT INTO data_sync (id, data, synced)
-                    VALUES (?, ?, ?)
-                """, (str(uuid.uuid4()), data_value, synced_value))
-            for _ in range(100):
-                cursor.execute("""
-                    INSERT INTO data_sync_1 (id, data, synced)
-                    VALUES (?, ?, ?)
-                """, (str(uuid.uuid4()), data_value, synced_value))
-        logger.info("Migrations and data seeding complete.")
+        with conn.cursor() as cursor:
+            for table in Tables:
+                cursor.execute(f"""
+                    CREATE TABLE IF NOT EXISTS {table} (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        data TEXT,
+                        synced BOOLEAN DEFAULT FALSE
+                    )
+                """)
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                if cursor.fetchone()[0] == 0:
+                    for _ in range(100):
+                        cursor.execute(f"""
+                            INSERT INTO {table} (id, data, synced)
+                            VALUES (?, ?, ?)
+                        """, (str(uuid.uuid4()), "This is a test record", False))
+        logger.info("Migration and seeding complete.")
     except Exception as e:
         logger.exception("Migration error: %s", e)
     finally:
-        connection.close()
+        conn.close()
 
-async def send_to_cloud(*args, **kwargs):
-    table = kwargs["table"]
-    columns = kwargs.get("columns", [])
-    interval = kwargs.get("interval", 10)
+async def send_to_cloud(table, columns, interval):
+    logger.info(f"Starting sync loop for {table}")
     batch_size = BATCH_SIZE
+    hub_client = IoTHubClientSingleton.get_client()
 
     while True:
         offset = 0
         rows_fetched = 0
-        connection = RqliteConnectionSingleton.get_connection()
+        conn = RqliteConnectionSingleton.get_connection()
 
         try:
-            with connection.cursor() as cursor:
+            with conn.cursor() as cursor:
                 more_rows = True
                 while more_rows:
-                    if not columns:
-                        query = f"""
-                            SELECT * FROM {table}
-                            WHERE synced = false
-                            LIMIT {batch_size} OFFSET {offset}
-                        """
-                    else:
-                        col_string = ", ".join(f"`{col}`" for col in columns)
-                        query = f"""
-                            SELECT {col_string} FROM {table}
-                            WHERE synced = false
-                            LIMIT {batch_size} OFFSET {offset}
-                        """
-
-                    cursor.execute(query)
+                    col_string = ", ".join(f"`{col}`" for col in columns) if columns else "*"
+                    cursor.execute(f"""
+                        SELECT id, {col_string} FROM {table}
+                        WHERE synced = false
+                        LIMIT {batch_size} OFFSET {offset}
+                    """)
                     rows = cursor.fetchall()
 
                     if not rows:
                         more_rows = False
                         break
 
-                    logger.info(f"[{table}] Fetched {len(rows)} rows from offset {offset}")
-                    rows_fetched += len(rows)
-                    offset += batch_size
+                    ids = []
+                    payload = dict()
+                    payload[table]=list()
+                    for row in rows:
+                        ids.append(row[0])
+                        logger.debug(f"[{table}] Sending row: {row}")
+                        entry = dict()
+                        for i,column in enumerate(columns):
+                            entry[column] = row[i]
+                        payload[table].append(entry)
+                    await hub_client.send_message_to_output(json.dumps(payload),table)
+                    if ids:
+                        placeholders = ",".join("?" for _ in ids)
+                        cursor.execute(f"""
+                            UPDATE {table} SET synced = true
+                            WHERE id IN ({placeholders})
+                        """, ids)
 
-                    # Simulate cloud upload delay
+                    offset += batch_size
+                    rows_fetched += len(rows)
                     await asyncio.sleep(0.1)
 
         except Exception as e:
-            logger.exception(f"Error in send_to_cloud for {table}: {e}")
+            logger.exception(f"[{table}] Error during sync: {e}")
         finally:
-            connection.close()
+            conn.close()
 
-        logger.info(f"[{table}] Sync cycle complete. Total rows processed: {rows_fetched}")
+        logger.info(f"[{table}] Sync complete. Total rows: {rows_fetched}")
         await asyncio.sleep(interval)
 
 async def main():
-    logger.info("Starting background sync tasks...")
-    for table, value in Tables.items():
-        TASKS[table] = asyncio.create_task(send_to_cloud(
+    logger.info("Starting all sync tasks")
+    tasks = []
+    for table, config in Tables.items():
+        task = asyncio.create_task(send_to_cloud(
             table=table,
-            columns=value.get("columns", []),
-            interval=value.get("interval", 10)
+            columns=config.get("columns", []),
+            interval=config.get("interval", 10)
         ))
-    await asyncio.gather(*TASKS.values())
+        tasks.append(task)
+
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        logger.info("Tasks cancelled.")
+    finally:
+        IoTHubClientSingleton.disconnect()
 
 if __name__ == "__main__":
     perform_migrations()
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Program interrupted by user.")

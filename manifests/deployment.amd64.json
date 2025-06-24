@@ -59,8 +59,8 @@
               "MAIN_SERVER": {"value": "api.ausa.health"}
             },
             "settings": {
-              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.8",
-              "createOptions": "{\"HostConfig\":{\"Binds\":[\"/var/aziot:/var/aziot:ro\"]}}"
+              "image": "ausahealthcontainerregistry1.azurecr.io/flutter_subscriber:0.0.17"
+
             }
           },
           "test_publisher": {
