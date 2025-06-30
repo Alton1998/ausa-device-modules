@@ -12,8 +12,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 Tables = {
-    "data_sync": {"columns": ["data"], "data_type": [], "interval": 10},
-    "data_sync_1": {"columns": ["data"], "data_type": [], "interval": 20}
+    "data_sync": {"columns": ["id","data"], "data_type": [], "interval": 10},
+    "data_sync_1": {"columns": ["id", "data"], "data_type": [], "interval": 20}
 }
 
 HOST = os.getenv("HOST", "localhost")
@@ -143,7 +143,7 @@ async def send_to_cloud(table, columns, interval):
                         logger.debug(f"[{table}] Sending row: {row}")
                         entry = dict()
                         for i,column in enumerate(columns):
-                            entry[column] = row[i]
+                            entry[column] = row[i+1]
                         payload[table].append(entry)
                     await hub_client.send_message_to_output(json.dumps(payload),table)
                     if ids:
