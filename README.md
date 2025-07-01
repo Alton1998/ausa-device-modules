@@ -551,6 +551,46 @@ LC_ALL=en_US.UTF-8
 
 ![Device Scan](./image/device_Scal.png)
 
+## Broker Routes
+
+### Device TOKEN auth 
+
+```
+ROUTE: authentication/#
+PAYLOAD: b"{
+ "identifier":"User ID"
+ "password": "password"
+}"
+```
+
+### User Login
+
+```
+ROUTE: authenticate_user/#
+PAYLOAD: b"{
+ "identifier":"User ID"
+ "password": "password"
+}"
+```
+
+### User Details
+
+```
+ROUTE: user/#
+PAYLOAD: b"{
+ "identifier":"User ID"
+}"
+```
+
+### Wifi and Bluetooth
+
+```
+ROUTE: bluetooth/devices
+ROUTE: wifi/devices
+```
+
+### Vitals Data Sync
+
 
 ## Resources
 1. https://learn.microsoft.com/en-us/azure/iot-dps/quick-setup-auto-provision-terraform?tabs=bash
