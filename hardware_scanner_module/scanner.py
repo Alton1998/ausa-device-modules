@@ -55,7 +55,7 @@ async def message_receiver():
             matched = False
             for pattern, _, callback in subscriptions:
                 if topic.endswith("/response"):
-                    break
+                    continue
                 if fnmatch.fnmatchcase(topic, pattern.replace("#", "*").replace("+", "?")):
                     response = callback(topic, payload)
                     logger.info(f"Callback:{callback} and Response: {response}")

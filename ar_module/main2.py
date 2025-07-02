@@ -1,71 +1,99 @@
+import cv2 as cv
 import torch
 import numpy as np
-import cv2
 from PIL import Image
-import open3d as o3d
 from transformers import pipeline
+import open3d as o3d
 
-# --------------------------------------
-# Step 1: Load RGB image and estimate depth using Depth Anything
-# --------------------------------------
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Load RGB image
-rgb_path = "frame.png"
-image = Image.open(rgb_path).convert("RGB")
+depth_pipe = pipeline("depth-estimation", model="LiheYoung/depth-anything-small-hf", device=0 if device == "cuda" else -1)
 
-# Load Depth Anything model
-depth_anything = pipeline(task="depth-estimation", model="LiheYoung/depth-anything-small-hf")
+cap = cv.VideoCapture(0)
+if not cap.isOpened():
+    print("Cannot open camera")
+    exit()
 
-# Predict depth
-depth_result = depth_anything(image)
-depth = depth_result["depth"]
+vis = o3d.visualization.Visualizer()
+vis.create_window(window_name='Open3D Point Cloud')
 
-# Convert to numpy array
-depth_np = np.array(depth)
+global_pcd = o3d.geometry.PointCloud()
+added = False
 
-# Normalize depth for visualization or to use as 16-bit image
-depth_min = depth_np.min()
-depth_max = depth_np.max()
-depth_norm = (depth_np - depth_min) / (depth_max - depth_min)  # normalize to 0-1
-depth_16bit = (depth_norm * 1000).astype(np.uint16)  # Scale to simulate "millimeter" style
+def create_gyro_extrinsic(angle_deg):
+    angle_rad = np.radians(angle_deg)
+    c, s = np.cos(angle_rad), np.sin(angle_rad)
+    R = np.array([
+        [c, 0, s],
+        [0, 1, 0],
+        [-s, 0, c]
+    ])
+    extrinsic = np.eye(4)
+    extrinsic[:3, :3] = R
+    return extrinsic
 
-# Save depth image (optional)
-cv2.imwrite("depth_anything.png", depth_16bit)
+frame_idx = 0
+try:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-# --------------------------------------
-# Step 2: Load RGB and estimated depth into Open3D
-# --------------------------------------
+        height, width = frame.shape[:2]
+        image = Image.fromarray(cv.cvtColor(frame, cv.COLOR_BGR2RGB))
 
-# Load images in Open3D
-color_raw = o3d.io.read_image(rgb_path)
-depth_raw = o3d.io.read_image("depth_anything.png")
+        depth_np = np.array(depth_pipe(image)["depth"])
+        depth_scaled = (depth_np / depth_np.max() * 1000).astype(np.uint16)
 
-# Get dimensions
-width = np.asarray(color_raw).shape[1]
-height = np.asarray(color_raw).shape[0]
-print("Image dimensions:", width, height)
+        color_o3d = o3d.geometry.Image(cv.cvtColor(frame, cv.COLOR_BGR2RGB))
+        depth_o3d = o3d.geometry.Image(depth_scaled)
 
-# Approximate intrinsics (adjust fx, fy if you know actual values!)
-intrinsic = o3d.camera.PinholeCameraIntrinsic()
-intrinsic.set_intrinsics(width, height,
-                         fx=360, fy=360,
-                         cx=width / 2, cy=height / 2)
+        focal_length = 0.5 * (width + height)
+        intrinsic = o3d.camera.PinholeCameraIntrinsic()
+        intrinsic.set_intrinsics(width, height,
+                                 fx=focal_length, fy=focal_length,
+                                 cx=width / 2, cy=height / 2)
 
-# Create RGBD image
-rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
-    color_raw, depth_raw,
-    depth_scale=1000.0,   # Matches the *1000 above to simulate millimeter depth
-    convert_rgb_to_intensity=False
-)
+        rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+            color_o3d, depth_o3d,
+            depth_scale=1000.0,
+            convert_rgb_to_intensity=False
+        )
 
-# Create point cloud
-pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
+        pcd_tmp = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, intrinsic)
 
-# Optionally transform to match Open3D view convention
-pcd.transform([[1, 0, 0, 0],
-               [0, -1, 0, 0],
-               [0, 0, -1, 0],
-               [0, 0, 0, 1]])
+        extrinsic = create_gyro_extrinsic(frame_idx % 360)
+        pcd_tmp.transform(extrinsic)
 
-# Visualize
-o3d.visualization.draw_geometries([pcd])
+        pcd_tmp.transform([[1, 0, 0, 0],
+                           [0, -1, 0, 0],
+                           [0, 0, -1, 0],
+                           [0, 0, 0, 1]])
+
+        # FIXED: accumulate in a new point cloud, then update in-place
+        combined_pcd = global_pcd + pcd_tmp
+        combined_pcd = combined_pcd.voxel_down_sample(voxel_size=0.01)
+
+        global_pcd.points = combined_pcd.points
+        global_pcd.colors = combined_pcd.colors
+
+        if not added:
+            vis.add_geometry(global_pcd)
+            added = True
+        else:
+            vis.update_geometry(global_pcd)
+
+        vis.poll_events()
+        vis.update_renderer()
+
+        cv.imshow("Video", frame)
+        cv.imshow("Depth", depth_np / depth_np.max())
+
+        frame_idx += 1
+        if cv.waitKey(1) == ord('q'):
+            break
+
+finally:
+    cap.release()
+    cv.destroyAllWindows()
+    vis.destroy_window()
