@@ -83,7 +83,8 @@ def bluetooth_scan(topic, payload):
 
 def wifi_scan(topic:str,payload:str):
     wifi = pywifi.PyWiFi()
-    iface = wifi.interfaces()[0]  # Get first wireless interface
+    iface = wifi.interfaces()[0]
+    payload = json.dumps(payload)# Get first wireless interface
 
     iface.scan()  # Start scan
     time.sleep(2)  # Wait for scan to complete
@@ -93,9 +94,56 @@ def wifi_scan(topic:str,payload:str):
         "wifi_devices": [(network.ssid, network.bssid) for network in results]
     }).encode("utf-8")
 
+import pywifi
+import json
+import time
+from pywifi import const
+
+def wifi_connect(topic: str, payload: str):
+    wifi = pywifi.PyWiFi()
+    iface = wifi.interfaces()[0]
+    try:
+        data = json.loads(payload)
+        ssid = data.get("ssid")
+        password = data.get("password")
+        if not ssid or not password:
+            return json.dumps({"status": "error", "message": "Missing ssid or password"})
+    except json.JSONDecodeError:
+        return json.dumps({"status": "error", "message": "Invalid JSON payload"}).encode("utf-8")
+    iface.disconnect()
+    time.sleep(1)
+    if iface.status() != const.IFACE_DISCONNECTED:
+        return json.dumps({"status": "error", "message": "Failed to disconnect before connecting"}).encode("utf-8")
+
+    profile = pywifi.Profile()
+    profile.ssid = ssid
+    profile.auth = const.AUTH_ALG_OPEN
+    profile.akm.append(const.AKM_TYPE_WPA2PSK)  # WPA2 PSK
+    profile.cipher = const.CIPHER_TYPE_CCMP
+    profile.key = password
+    iface.remove_all_network_profiles()
+    tmp_profile = iface.add_network_profile(profile)
+    iface.connect(tmp_profile)
+    start_time = time.time()
+    timeout = 15  # seconds
+    while time.time() - start_time < timeout:
+        if iface.status() == const.IFACE_CONNECTED:
+            return json.dumps({"status": "success", "message": f"Connected to {ssid}"}).encode("utf-8")
+        time.sleep(1)
+
+    return json.dumps({"status": "error", "message": f"Failed to connect to {ssid} within timeout"}).encode("utf-8")
+
+def bluetooth_connect(topic: str, payload: str):
+    return "".encode()
+
+
+
+
 if __name__ == "__main__":
     register_handler("bluetooth/devices", QOS_2,bluetooth_scan)
     register_handler("wifi/devices",QOS_2,wifi_scan)
+    register_handler("wifi/connect",QOS_2,wifi_connect)
+    register_handler("bluetooth/connect",QOS_2,bluetooth_connect)
     try:
         asyncio.get_event_loop().run_until_complete(message_receiver())
     except KeyboardInterrupt:

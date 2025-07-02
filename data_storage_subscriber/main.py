@@ -145,10 +145,11 @@ def storage(topic,payload):
     logger.info(f"Received Payload:{payload} on topic {topic} ")
     conn = RqliteConnectionSingleton.get_connection()
     payload:Dict = json.loads(payload)
+    response = None
     if payload is None or payload.keys() is None:
-        return json.dumps({
+        response = json.dumps({
             "error":"No keys present"
-        })
+        }).encode("utf-8")
     try:
         with conn.cursor() as cursor:
             for key in payload.keys():
@@ -166,10 +167,17 @@ def storage(topic,payload):
 
                     query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
                     cursor.execute(query, values)
+            response = json.dumps({
+                "status": "Successful"
+            }).encode("utf-8")
     except Exception as e:
-        logger.exception(f"An error occured while reading the vitals table:{e}")
+        logger.exception(f"An error occured while inserting to a table:{e}")
+        response = json.dumps({
+                "error": "Error occured while inserting to a table"
+            }).encode("utf-8")
     finally:
         conn.close()
+        return response
 
 if __name__ == "__main__":
     perform_migrations()
