@@ -101,6 +101,7 @@ sudo nano /etc/docker/daemon.json
 Close the file up
 ```commandline
 sudo systemctl restart docker
+journalctl -u docker.service --no-pager --full | tail -n 50
 ```
 Installing IoT Edge Runtime
 ```commandline
