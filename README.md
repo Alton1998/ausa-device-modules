@@ -84,7 +84,7 @@ iotedgehubdev start -d .\deployment.amd64.json
 curl https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb > ./packages-microsoft-prod.deb
 sudo apt install ./packages-microsoft-prod.deb
 sudo apt-get update
-sudo apt-get install moby-engine
+sudo apt-get install moby-engine moby-cli
 ```
 
 #### Restarting Docker
