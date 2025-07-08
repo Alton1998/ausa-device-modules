@@ -102,6 +102,9 @@ Close the file up
 ```commandline
 sudo systemctl restart docker
 journalctl -u docker.service --no-pager --full | tail -n 50
+sudo apt update
+sudo apt install fuse-overlayfs # for bananapi
+
 ```
 Installing IoT Edge Runtime
 ```commandline
