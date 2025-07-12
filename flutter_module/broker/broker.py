@@ -9,7 +9,7 @@ config = {
     "listeners": {
         "default": {
             "type": "tcp",
-            "bind": "0.0.0.0:1883",
+            "bind": "0.0.0.0:2883",
         },
         "ws-mqtt": {
             "type": "ws",
