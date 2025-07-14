@@ -595,6 +595,150 @@ ROUTE: wifi/devices
 
 ### Vitals Data Sync
 
+Absolutely! Here’s a clean, step-by-step summary of **everything you did to get your Flutter app running with GUI on your Armbian Sige5 board** — from installing dependencies to fixing LightDM/Xorg issues with the framebuffer.
+
+---
+
+# Complete Setup & Fix Guide for Flutter GUI on Armbian Sige5 with HDMI
+
+---
+
+## 1. Update system and install Flutter dependencies
+
+```bash
+sudo apt update
+sudo apt install -y \
+  libpulse-dev libglib2.0-dev libasound2-dev pkg-config libgtk-3-dev \
+  clang cmake ninja-build pkg-config \
+  xserver-xorg xinit x11-xserver-utils x11-common \
+  xserver-xorg-video-fbdev \
+  lightdm xfce4 xfce4-goodies
+```
+
+* Installed all required Linux development libraries for Flutter plugins (audio, GTK).
+* Installed Linux build tools: clang, cmake, ninja, pkg-config.
+* Installed Xorg server, utilities, and framebuffer video driver (`fbdev`).
+* Installed LightDM display manager and XFCE desktop environment.
+
+---
+
+## 2. Enable and start LightDM
+
+```bash
+sudo systemctl enable lightdm
+sudo systemctl start lightdm
+```
+
+---
+
+## 3. Fix LightDM start failures
+
+* Checked LightDM status:
+
+  ```bash
+  systemctl status lightdm
+  ```
+
+* Noted failures and lack of `/var/log/Xorg.0.log` — meaning Xorg never started.
+
+* Installed missing Xorg packages to ensure X server present:
+
+  ```bash
+  sudo apt install xserver-xorg xinit x11-xserver-utils x11-common
+  ```
+
+---
+
+## 4. Checked framebuffer device presence
+
+```bash
+ls /dev/fb0
+```
+
+* Found `/dev/fb0` exists → framebuffer device available.
+
+---
+
+## 5. Analyzed Xorg log (`/var/log/Xorg.0.log`) errors
+
+* Error:
+
+  ```
+  Cannot run in framebuffer mode. Please specify busIDs for all framebuffer devices
+  ```
+
+* Cause: conflicting or incomplete Xorg config trying to use both `modesetting` and `fbdev`.
+
+---
+
+## 6. Created minimal `/etc/X11/xorg.conf` forcing only fbdev driver
+
+```bash
+sudo nano /etc/X11/xorg.conf
+```
+
+Paste:
+
+```
+Section "ServerLayout"
+    Identifier     "Default Layout"
+    Screen         "Default Screen" 0 0
+EndSection
+
+Section "Device"
+    Identifier     "Configured Video Device"
+    Driver         "fbdev"
+EndSection
+
+Section "Screen"
+    Identifier     "Default Screen"
+    Device         "Configured Video Device"
+EndSection
+```
+
+---
+
+## 7. Restarted LightDM
+
+```bash
+sudo systemctl restart lightdm
+```
+
+* This fixed the LightDM / Xorg startup issues.
+* Graphical login screen appeared on HDMI monitor connected to Sige5 board.
+
+---
+
+## 8. Run Flutter app in Linux desktop mode
+
+In the graphical desktop terminal:
+
+```bash
+cd ~/ausa_health_flutter
+flutter clean
+flutter pub get
+flutter run -d linux
+```
+
+* Flutter app launched successfully with GUI on the HDMI-connected monitor.
+
+---
+
+# Summary
+
+| Step                     | Purpose                                            |
+| ------------------------ | -------------------------------------------------- |
+| Install dependencies     | Flutter build libs, Linux dev tools, Xorg, drivers |
+| Enable/start LightDM     | Manage graphical login/display                     |
+| Check framebuffer device | Confirm `/dev/fb0` availability                    |
+| Analyze Xorg errors      | Diagnose framebuffer conflicts                     |
+| Create minimal xorg.conf | Force fbdev driver, avoid busID issues             |
+| Restart LightDM          | Apply fix and start graphical server               |
+| Launch Flutter app       | Run GUI app on Linux desktop                       |
+
+
+
+
 
 ## Resources
 1. https://learn.microsoft.com/en-us/azure/iot-dps/quick-setup-auto-provision-terraform?tabs=bash
