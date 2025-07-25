@@ -737,6 +737,103 @@ flutter run -d linux
 | Launch Flutter app       | Run GUI app on Linux desktop                       |
 
 
+To set up `x11vnc` to run automatically with **LightDM** on startup (e.g., on Armbian or any Debian-based distro), here’s a full and clean setup process:
+
+---
+
+### ✅ 1. **Install `x11vnc`**
+
+```bash
+sudo apt update
+sudo apt install x11vnc
+```
+
+---
+
+### ✅ 2. **Set VNC Password**
+
+```bash
+x11vnc -storepasswd
+```
+
+This stores the password in `~/.vnc/passwd`. You can also choose a custom location if needed.
+
+---
+
+### ✅ 3. **Create systemd service file**
+
+We'll create a service that starts `x11vnc` after LightDM loads.
+
+```bash
+sudo nano /etc/systemd/system/x11vnc.service
+```
+
+Paste the following:
+
+```ini
+[Unit]
+Description=Start x11vnc at startup to share LightDM display :0
+After=display-manager.service
+Requires=display-manager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/x11vnc -auth /var/run/lightdm/root/:0 \
+ -forever -loop -noxdamage -repeat \
+ -rfbauth /root/.vnc/passwd -shared -rfbport 5900 \
+ -display :0
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=graphical.target
+```
+
+> **Note:**
+>
+> * If LightDM runs as a different user (e.g., `lightdm`), you'll need to adjust the `-auth` path.
+> * `/root/.vnc/passwd` assumes you stored the password as root. You can change both the path and `User=` to a specific user if preferred.
+
+---
+
+### ✅ 4. **Enable and Start the Service**
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable x11vnc.service
+sudo systemctl start x11vnc.service
+```
+
+---
+
+### ✅ 5. **Verify**
+
+You can check whether it started correctly:
+
+```bash
+sudo systemctl status x11vnc.service
+```
+
+And check listening ports:
+
+```bash
+netstat -tulpn | grep 5900
+```
+
+---
+
+### ✅ 6. **(Optional) Allow VNC Through Firewall**
+
+```bash
+sudo ufw allow 5900/tcp
+```
+
+---
+
+Let me know if you're using a **non-root user**, **Wayland**, or want to expose a different display (like `:1`), and I’ll adjust accordingly.
+
+
 
 
 
