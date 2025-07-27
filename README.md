@@ -833,6 +833,152 @@ sudo ufw allow 5900/tcp
 
 Let me know if you're using a **non-root user**, **Wayland**, or want to expose a different display (like `:1`), and I’ll adjust accordingly.
 
+Here are the **complete and clean steps to install Flutter on a Linux (ARM-based) system like Armbian**, including support for headless Linux desktop builds (`flutter run -d linux`) and integration with a systemd service.
+
+---
+
+## ✅ Full Setup: Flutter + Linux Desktop + Systemd Service on ARM
+
+---
+
+### ✅ 1. **Install Flutter SDK (ARM64-compatible)**
+
+> Do **not** use the standard x86 Flutter SDK. You’ll compile it from source instead.
+
+#### 📦 Prerequisites
+
+```bash
+sudo apt update && sudo apt install -y \
+  curl git unzip xz-utils zip libglu1-mesa
+```
+
+#### 📥 Clone Flutter source (stable channel)
+
+```bash
+git clone https://github.com/flutter/flutter.git -b stable /opt/flutter
+```
+
+#### 🔧 Add Flutter to PATH (permanently)
+
+Add to `~/.bashrc`, `~/.profile`, or root's `.bashrc` if using root:
+
+```bash
+export PATH="$PATH:/opt/flutter/bin"
+```
+
+Apply it:
+
+```bash
+source ~/.bashrc
+flutter --version
+```
+
+---
+
+### ✅ 2. **Install Linux Desktop Build Dependencies**
+
+```bash
+sudo apt install -y \
+  clang cmake ninja-build pkg-config \
+  libgtk-3-dev libblkid-dev liblzma-dev \
+  libstdc++-12-dev liblzma-dev \
+  libasound2-dev libpulse-dev libjsoncpp-dev \
+  libappindicator3-dev libglib2.0-dev
+```
+
+---
+
+### ✅ 3. **Enable Flutter Linux Desktop Support**
+
+```bash
+flutter config --enable-linux-desktop
+flutter doctor
+```
+
+Make sure the doctor reports no critical errors (you may ignore Android/iOS if not needed).
+
+---
+
+### ✅ 4. **Install xvfb for Headless GUI Support**
+
+Used for running GTK apps (like Flutter Linux) on a headless system:
+
+```bash
+sudo apt install xvfb
+```
+
+---
+
+### ✅ 5. **Create Flutter App Runner Script**
+
+Create `/root/run_flutter.sh`:
+
+```bash
+#!/bin/bash
+
+export PATH=$PATH:/opt/flutter/bin
+export DISPLAY=:99
+
+APP_DIR="/root/flutter_linux_app"
+REPO_URL="https://github.com/AusaHealth/ausa_health_flutter.git"
+BRANCH="mqtt"
+
+# Clone if not exists
+if [ ! -d "$APP_DIR" ]; then
+  git clone -b $BRANCH $REPO_URL $APP_DIR
+fi
+
+cd "$APP_DIR"
+git pull origin $BRANCH
+
+/opt/flutter/bin/flutter pub get
+xvfb-run /opt/flutter/bin/flutter run -d linux
+```
+
+Make it executable:
+
+```bash
+chmod +x /root/run_flutter.sh
+```
+
+---
+
+### ✅ 6. **Create systemd Service**
+
+Create `/etc/systemd/system/flutter-app.service`:
+
+```ini
+[Unit]
+Description=Flutter App Launcher
+After=network.target
+
+[Service]
+User=root
+ExecStart=/root/run_flutter.sh
+Restart=always
+RestartSec=10
+Environment=DISPLAY=:99
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable flutter-app
+sudo systemctl start flutter-app
+```
+
+Check logs:
+
+```bash
+journalctl -u flutter-app -f
+```
+
+---
+
 
 
 
